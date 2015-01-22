@@ -34,5 +34,29 @@ namespace WindowsFormsApplication1.Properties {
                 this["Port"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool Aimp_RC {
+            get {
+                return ((bool)(this["Aimp_RC"]));
+            }
+            set {
+                this["Aimp_RC"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int Aimp_Port {
+            get {
+                return ((int)(this["Aimp_Port"]));
+            }
+            set {
+                this["Aimp_Port"] = value;
+            }
+        }
     }
 }

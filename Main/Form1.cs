@@ -13,6 +13,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using CoreAudioApi;
 using CoreAudioApi.Interfaces;
+using System.Net;
 
 namespace WindowsFormsApplication1
 {
@@ -121,15 +122,36 @@ namespace WindowsFormsApplication1
             }
             else if (str.Contains("0C0025238408"))
             {
-                SendKey("{F7}");
+                if (Properties.Settings.Default.Aimp_RC)
+                {
+                    aimp_SendRPCHTTP(aimp_next);
+                }
+                else
+                {
+                    SendKey("{F7}");
+                }
             }
             else if (str.Contains("0C0025238404"))
-            {
-                SendKey("{F6}");
+            {             
+                if (Properties.Settings.Default.Aimp_RC)
+                {
+                aimp_SendRPCHTTP(aimp_prev);
+                }
+                else
+                {
+                    SendKey("{F6}"); 
+                }
             }
             else if (str.Contains("05002532801D"))
-            {
-                SendKey("{F8}");
+            {     
+                if (Properties.Settings.Default.Aimp_RC)
+                {
+                    aimp_SendRPCHTTP(aimp_pause);
+                }
+                else
+                {
+                    SendKey("{F8}"); 
+                }
             }
             return false;
         }
@@ -154,10 +176,37 @@ namespace WindowsFormsApplication1
         }
         #endregion
 
+        #region AIMP_RPC
+        static public void aimp_SendRPCHTTP(string command)
+        {
+            var httpWebRequest = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:3333/RPC_JSON");
+            httpWebRequest.ContentType = "text/json";
+            httpWebRequest.Method = "POST";
+            using (var streamWriter = new StreamWriter(httpWebRequest.GetRequestStream()))
+            {
+                streamWriter.Write(command);
+                streamWriter.Flush();
+                streamWriter.Close();
+                var httpResponse = (HttpWebResponse)httpWebRequest.GetResponse();
+                using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+                {
+                    var result = streamReader.ReadToEnd();
+                }
+            }
+        }
+        static public string aimp_pause = "{\"id\": \"1\",\"method\": \"Pause\", \"params\": {}, \"version\": \"1.1\"}";
+        static public string aimp_prev = "{\"id\": \"1\",\"method\": \"PlayPrevious\", \"params\": {}, \"version\": \"1.1\"}";
+        static public string aimp_next = "{\"id\": \"1\",\"method\": \"PlayNext\", \"params\": {}, \"version\": \"1.1\"}";
+        #endregion
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
             sp.Close();
             System.Diagnostics.Process.GetCurrentProcess().Kill();
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.Aimp_RC = checkBox1.Checked;
         }
     }
 }
