@@ -37,11 +37,48 @@ namespace WindowsFormsApplication1
         public Form1()
         {
             InitializeComponent();
+            InitVolume();
         }
-        static public void ReInitVolume()
+        public void InitVolume()
         {
             devEnum = new MMDeviceEnumerator();
-            defaultDevice = devEnum.GetDefaultAudioEndpoint(EDataFlow.eRender, ERole.eMultimedia);
+            MMDeviceCollection devColl = devEnum.EnumerateAudioEndPoints(EDataFlow.eRender, EDeviceState.DEVICE_STATE_ACTIVE);
+            int devNum = devColl.Count;
+            comboBox2.Items.Clear();
+            comboBox2.Items.Add("Default");
+            comboBox3.Items.Add("0");
+            for (int i = 0; i < devNum; i++)
+            {
+                comboBox2.Items.Add(devColl[i].FriendlyName);
+                comboBox3.Items.Add(devColl[i].ID);
+            }
+            string devid = Properties.Settings.Default.SelectedDevice;
+            for (int f = 0; f < comboBox3.Items.Count; f++)
+            {
+                if (comboBox3.Items[f].ToString() == devid)
+                {
+                    comboBox2.SelectedIndex = f;
+                }
+
+            }
+            if(comboBox2.SelectedIndex < 1){comboBox2.SelectedIndex = 0;}
+        }
+        public void WriteToRichTextBox(string message)
+        {
+            richTextBox1.Text += message;
+            richTextBox1.Text += (char)13;
+        }
+        public void ReInitVolume()
+        {
+            devEnum = new MMDeviceEnumerator();
+            if (comboBox2.SelectedIndex < 1)
+            {
+                defaultDevice = devEnum.GetDefaultAudioEndpoint(EDataFlow.eRender, ERole.eMultimedia);
+            }
+            else
+            {
+                defaultDevice = devEnum.GetDevice(comboBox3.Items[comboBox2.SelectedIndex].ToString());
+            }            
         }
         static public Boolean Reconnect()
         {
@@ -98,6 +135,8 @@ namespace WindowsFormsApplication1
                 {
                     string message = sp.ReadLine();
                     CheckAndDo(message);
+                    Form1 frm = new Form1();
+                    frm.WriteToRichTextBox(message);
                 }
                 catch (TimeoutException) { }
                 catch (Exception) 
@@ -159,7 +198,8 @@ namespace WindowsFormsApplication1
         #region Does
         static public void SetVolume(int val, int max)
         {
-            ReInitVolume();
+            Form1 frm = new Form1();
+            frm.ReInitVolume();
             float newval = (float)val / (float)max;
             defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar = newval;
         }
@@ -207,6 +247,13 @@ namespace WindowsFormsApplication1
         private void checkBox1_CheckedChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.Aimp_RC = checkBox1.Checked;
+            Properties.Settings.Default.Save();
+        }
+
+        private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.SelectedDevice = comboBox3.Items[comboBox2.SelectedIndex].ToString();
+            Properties.Settings.Default.Save();
         }
     }
 }
