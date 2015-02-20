@@ -33,6 +33,7 @@ namespace WindowsFormsApplication1
         static MMDeviceEnumerator devEnum;
         static MMDevice defaultDevice;
         Form2 FRM2 = new Form2();
+        static Boolean Aimp_RC = false;
 
         string COM;
         public Form1()
@@ -115,6 +116,7 @@ namespace WindowsFormsApplication1
             numericUpDown1.Value = Properties.Settings.Default.Aimp_Port;
             //checkBox1
             checkBox1.Checked = Properties.Settings.Default.Aimp_RC;
+            Aimp_RC = Properties.Settings.Default.Aimp_RC;
             //checkBox2
             checkBox2.Checked = Properties.Settings.Default.AutoConnect;
             if (Properties.Settings.Default.AutoConnect) { connect(); }
@@ -153,74 +155,71 @@ namespace WindowsFormsApplication1
                 {
                     string message = sp.ReadLine();
                     CheckAndDo(message);
-                    Form1 frm = new Form1();
-                    frm.WriteToRichTextBox(message);
                     err = false;
                 }
-                catch (TimeoutException) { }
                 catch (Exception) 
                 {
+                    err = true;
                 }
                 if (err) { do { await Reconnect(); } while (sp.IsOpen == false); }
             }
         }
-        static public Boolean CheckAndDo(string str)
+        static public async void CheckAndDo(string str)
         {
             if (str.Contains("0F7431F110"))
             {
                 int where = str.IndexOf("0F7431F110");
                 string val = str.Remove(0, where + "0F7431F110".Length);
                 val = val.Remove(2);
-                SetVolume(Convert.ToInt32(val), 51);
-
+                await SetVolume(Convert.ToInt32(val), 51);
             }
             else if (str.Contains("0C0025238408"))
             {
-                if (Properties.Settings.Default.Aimp_RC)
+                if (Aimp_RC)
                 {
-                    aimp_SendRPCHTTP(aimp_next);
+                    await aimp_SendRPCHTTP(aimp_next);
                 }
                 else
                 {
-                    SendKey("{F7}");
+                    await SendKey("{F7}");
                 }
             }
             else if (str.Contains("0C0025238404"))
             {             
-                if (Properties.Settings.Default.Aimp_RC)
+                if (Aimp_RC)
                 {
-                aimp_SendRPCHTTP(aimp_prev);
+                    await aimp_SendRPCHTTP(aimp_prev);
                 }
                 else
                 {
-                    SendKey("{F6}"); 
+                    await SendKey("{F6}"); 
                 }
             }
             else if (str.Contains("05002532801D"))
             {     
-                if (Properties.Settings.Default.Aimp_RC)
+                if (Aimp_RC)
                 {
-                    aimp_SendRPCHTTP(aimp_pause);
+                    await aimp_SendRPCHTTP(aimp_pause);
                 }
                 else
                 {
-                    SendKey("{F8}"); 
+                    await SendKey("{F8}"); 
                 }
             }
-            return false;
         }
 
         #region Does
-        static public void SetVolume(int val, int max)
+        static public Task SetVolume(int val, int max)
         {
-            Form1 frm = new Form1();
-            frm.ReInitVolume();
             float newval = (float)val / (float)max;
-            defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar = newval;
+            try { defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar = newval; }
+            catch { Form1 frm = new Form1(); frm.ReInitVolume(); try { defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar = newval; } catch { } }
+            return null;
         }
-        static public void SendKey(string keys)
+        static public Task SendKey(string keys)
         {
             SendKeys.SendWait(keys);
+            return null;
         }
 
         static public void MouseSet(int x, int y)
@@ -232,7 +231,7 @@ namespace WindowsFormsApplication1
         #endregion
 
         #region AIMP_RPC
-        static public void aimp_SendRPCHTTP(string command)
+        static public Task aimp_SendRPCHTTP(string command)
         {
             var httpWebRequest = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:" + Properties.Settings.Default.Aimp_Port + "/RPC_JSON");
             httpWebRequest.ContentType = "text/json";
@@ -248,6 +247,7 @@ namespace WindowsFormsApplication1
                     var result = streamReader.ReadToEnd();
                 }
             }
+            return null;
         }
         static public string aimp_pause = "{\"id\": \"1\",\"method\": \"Pause\", \"params\": {}, \"version\": \"1.1\"}";
         static public string aimp_prev = "{\"id\": \"1\",\"method\": \"PlayPrevious\", \"params\": {}, \"version\": \"1.1\"}";
@@ -262,6 +262,7 @@ namespace WindowsFormsApplication1
         private void checkBox1_CheckedChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.Aimp_RC = checkBox1.Checked;
+            Aimp_RC = checkBox1.Checked;
             Properties.Settings.Default.Save();
             if (checkBox1.Checked) { numericUpDown1.Enabled = false; } else { numericUpDown1.Enabled = true; }
         }
