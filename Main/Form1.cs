@@ -32,12 +32,14 @@ namespace WindowsFormsApplication1
         Thread readThread = new Thread(Read);
         static MMDeviceEnumerator devEnum;
         static MMDevice defaultDevice;
+        Form2 FRM2 = new Form2();
 
         string COM;
         public Form1()
         {
             InitializeComponent();
             InitVolume();
+            this.Size = new Size(286, 277);
         }
         public void InitVolume()
         {
@@ -80,32 +82,42 @@ namespace WindowsFormsApplication1
                 defaultDevice = devEnum.GetDevice(comboBox3.Items[comboBox2.SelectedIndex].ToString());
             }            
         }
-        static public Boolean Reconnect()
+        static public async Task Reconnect()
         {
-            while(true)
+            var result = await Task<Boolean>.Factory.StartNew(() =>
             {
-                try
-                {
-                    sp.Open();
-                    return true;
-                }
-                catch{}
-            }
+                Thread.Sleep(100);
+                try{sp.Open();}catch{}
+                return true;
+            });
         }
         private void Form1_Load(object sender, EventArgs e)
         {
+
+        }
+        private void Form1_Shown(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.Reload();
+            //comboBox1
             comboBox1.Items.Clear();
-            if(Properties.Settings.Default.Port == string.Empty)
+            if (Properties.Settings.Default.Port == string.Empty)
             {
                 comboBox1.Items.AddRange(SerialPort.GetPortNames());
             }
             COM = Properties.Settings.Default.Port;
-            if(COM != "" && comboBox1.Items.Contains(COM) == false){comboBox1.Items.Add(COM);}
-            if(comboBox1.Items.Count > 0)
+            if (COM != "" && comboBox1.Items.Contains(COM) == false) { comboBox1.Items.Add(COM); }
+            if (comboBox1.Items.Count > 0)
             {
                 comboBox1.SelectedIndex = 0;
                 button2.Enabled = true;
             }
+            //numericUpDown1
+            numericUpDown1.Value = Properties.Settings.Default.Aimp_Port;
+            //checkBox1
+            checkBox1.Checked = Properties.Settings.Default.Aimp_RC;
+            //checkBox2
+            checkBox2.Checked = Properties.Settings.Default.AutoConnect;
+            if (Properties.Settings.Default.AutoConnect) { connect(); }
             ReInitVolume();
         }
         private void button1_Click(object sender, EventArgs e)
@@ -113,40 +125,43 @@ namespace WindowsFormsApplication1
             comboBox1.Items.Clear();
             comboBox1.Items.AddRange(SerialPort.GetPortNames());
         }
-
         private void button2_Click(object sender, EventArgs e)
+        {
+            connect();
+        }
+        public async void connect()
         {
             try
             {
                 sp.PortName = comboBox1.SelectedItem.ToString();
                 sp.BaudRate = 250000;
                 sp.ReadTimeout = 500;
-                Reconnect();
-                readThread.Start();
                 button2.Enabled = false;
+                button2.Text = "...";
+                do { await Reconnect(); } while (sp.IsOpen == false);
+                button2.Text = "Online";
+                readThread.Start();
             }
             catch { }
         }
-        public static void Read()
+        public static async void Read()
         {
             while (true)
             {
+                Boolean err = true;
                 try
                 {
                     string message = sp.ReadLine();
                     CheckAndDo(message);
                     Form1 frm = new Form1();
                     frm.WriteToRichTextBox(message);
+                    err = false;
                 }
                 catch (TimeoutException) { }
                 catch (Exception) 
                 {
-                    if (!sp.IsOpen)
-                    {
-                        try { Reconnect(); }
-                        catch { }
-                    }
                 }
+                if (err) { do { await Reconnect(); } while (sp.IsOpen == false); }
             }
         }
         static public Boolean CheckAndDo(string str)
@@ -219,7 +234,7 @@ namespace WindowsFormsApplication1
         #region AIMP_RPC
         static public void aimp_SendRPCHTTP(string command)
         {
-            var httpWebRequest = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:3333/RPC_JSON");
+            var httpWebRequest = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:" + Properties.Settings.Default.Aimp_Port + "/RPC_JSON");
             httpWebRequest.ContentType = "text/json";
             httpWebRequest.Method = "POST";
             using (var streamWriter = new StreamWriter(httpWebRequest.GetRequestStream()))
@@ -248,12 +263,46 @@ namespace WindowsFormsApplication1
         {
             Properties.Settings.Default.Aimp_RC = checkBox1.Checked;
             Properties.Settings.Default.Save();
+            if (checkBox1.Checked) { numericUpDown1.Enabled = false; } else { numericUpDown1.Enabled = true; }
         }
 
         private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.SelectedDevice = comboBox3.Items[comboBox2.SelectedIndex].ToString();
             Properties.Settings.Default.Save();
+        }
+
+        private void checkBox2_CheckedChanged(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.AutoConnect = checkBox2.Checked;
+            Properties.Settings.Default.Save();
+        }
+        private void numericUpDown1_ValueChanged(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.Aimp_Port = Convert.ToInt32(numericUpDown1.Value);
+            Properties.Settings.Default.Save();
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            if (Form1.ActiveForm.Size.Height > 500)
+            {
+                Form1.ActiveForm.Size = new Size(286, 277);
+                button3.Text = "ν  Expand log  ν";
+            }
+            else
+            {
+                Form1.ActiveForm.Size = new Size(286, 677);
+                button3.Text = "^  Hide log  ^";
+            }
+
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            if (FRM2.IsDisposed) { FRM2 = new Form2(); }
+            FRM2.Show();
+            FRM2.Activate();
         }
     }
 }
