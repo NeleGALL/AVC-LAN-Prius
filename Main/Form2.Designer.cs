@@ -47,7 +47,7 @@
             // 
             // Avc
             // 
-            this.Avc.HeaderText = "Команда";
+            this.Avc.HeaderText = "What";
             this.Avc.Name = "Avc";
             // 
             // Form2

@@ -8,14 +8,16 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
+using System.Web;
+using System.Xml;
+
 
 namespace WindowsFormsApplication1
 {
     public partial class Form2 : Form
     {
-        List<String> asd = new List<String>();
+        DataSet ds = new DataSet();
         DataTable dt = new DataTable("Actions");
-        FileStream f;
         BindingSource bs = new BindingSource();
         public Form2()
         {
@@ -24,18 +26,14 @@ namespace WindowsFormsApplication1
 
         private void Form2_Load(object sender, EventArgs e)
         {
-            FileStream f = File.OpenWrite("actions.xml");
-            f.Close();
+            ds.Tables.Add(dt);
             System.Threading.Thread.Sleep(100);
-            try { dt.ReadXml("actions.xml"); }
-            catch { }
-            
-            bs.DataSource = dt; 
-            dataGridView1.DataSource = dt;
+            dataGridView1.DataSource = ds;
+            dataGridView1.DataMember = "Actions";
             DataGridViewComboBoxColumn myCombo = new DataGridViewComboBoxColumn();
-            myCombo.HeaderText = "Команда";
+            myCombo.HeaderText = "Does";
             myCombo.Name = "Does";
-            this.dataGridView1.Columns.Insert(1, myCombo);
+            //this.dataGridView1.Columns.Insert(1, myCombo);
             myCombo.Items.Add("AIMP Next");
             myCombo.Items.Add("AIMP Prev");
             myCombo.Items.Add("AIMP Play/Pause");
@@ -44,7 +42,8 @@ namespace WindowsFormsApplication1
 
         private void dataGridView1_CellEndEdit(object sender, DataGridViewCellEventArgs e)
         {
-            dt.WriteXml("actions.xml", XmlWriteMode.WriteSchema);
+            dataGridView1.EndEdit();
+            ds.WriteXml("actions.xml");
         }
     }
 }

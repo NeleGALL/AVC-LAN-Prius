@@ -34,6 +34,7 @@ namespace WindowsFormsApplication1
         static MMDevice defaultDevice;
         Form2 FRM2 = new Form2();
         static Boolean Aimp_RC = false;
+        static Int32 Aimp_Port = 3333;
 
         string COM;
         public Form1()
@@ -114,6 +115,7 @@ namespace WindowsFormsApplication1
             }
             //numericUpDown1
             numericUpDown1.Value = Properties.Settings.Default.Aimp_Port;
+            Aimp_Port = Properties.Settings.Default.Aimp_Port;
             //checkBox1
             checkBox1.Checked = Properties.Settings.Default.Aimp_RC;
             Aimp_RC = Properties.Settings.Default.Aimp_RC;
@@ -233,20 +235,24 @@ namespace WindowsFormsApplication1
         #region AIMP_RPC
         static public Task aimp_SendRPCHTTP(string command)
         {
-            var httpWebRequest = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:" + Properties.Settings.Default.Aimp_Port + "/RPC_JSON");
+            var httpWebRequest = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:" + Convert.ToString(Aimp_Port) + "/RPC_JSON");
             httpWebRequest.ContentType = "text/json";
             httpWebRequest.Method = "POST";
-            using (var streamWriter = new StreamWriter(httpWebRequest.GetRequestStream()))
+            try
             {
-                streamWriter.Write(command);
-                streamWriter.Flush();
-                streamWriter.Close();
-                var httpResponse = (HttpWebResponse)httpWebRequest.GetResponse();
-                using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+                using (StreamWriter streamWriter = new StreamWriter(httpWebRequest.GetRequestStream()))
                 {
-                    var result = streamReader.ReadToEnd();
+                    streamWriter.Write(command);
+                    streamWriter.Flush();
+                    streamWriter.Close();
+                    HttpWebResponse httpResponse = (HttpWebResponse)httpWebRequest.GetResponse();
+                    using (StreamReader streamReader = new StreamReader(httpResponse.GetResponseStream()))
+                    {
+                        var result = streamReader.ReadToEnd();
+                    }
                 }
             }
+            catch { return null; }
             return null;
         }
         static public string aimp_pause = "{\"id\": \"1\",\"method\": \"Pause\", \"params\": {}, \"version\": \"1.1\"}";
@@ -266,13 +272,11 @@ namespace WindowsFormsApplication1
             Properties.Settings.Default.Save();
             if (checkBox1.Checked) { numericUpDown1.Enabled = false; } else { numericUpDown1.Enabled = true; }
         }
-
         private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.SelectedDevice = comboBox3.Items[comboBox2.SelectedIndex].ToString();
             Properties.Settings.Default.Save();
         }
-
         private void checkBox2_CheckedChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.AutoConnect = checkBox2.Checked;
@@ -281,9 +285,9 @@ namespace WindowsFormsApplication1
         private void numericUpDown1_ValueChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.Aimp_Port = Convert.ToInt32(numericUpDown1.Value);
+            Aimp_Port = Convert.ToInt32(numericUpDown1.Value);
             Properties.Settings.Default.Save();
         }
-
         private void button3_Click(object sender, EventArgs e)
         {
             if (Form1.ActiveForm.Size.Height > 500)
@@ -296,9 +300,7 @@ namespace WindowsFormsApplication1
                 Form1.ActiveForm.Size = new Size(286, 677);
                 button3.Text = "^  Hide log  ^";
             }
-
         }
-
         private void button4_Click(object sender, EventArgs e)
         {
             if (FRM2.IsDisposed) { FRM2 = new Form2(); }
