@@ -214,9 +214,16 @@ namespace WindowsFormsApplication1
         static public Task SetVolume(int val, int max)
         {
             float newval = (float)val / (float)max;
-            try { defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar = newval; }
-            catch { Form1 frm = new Form1(); frm.ReInitVolume(); try { defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar = newval; } catch { } }
+            try { VolumeByChannel(newval); }
+            catch { Form1 frm = new Form1(); frm.ReInitVolume(); try { VolumeByChannel(newval); } catch { } }
             return null;
+        }
+        static public void VolumeByChannel(float newval)
+        {
+            for (int c = 0; c < defaultDevice.AudioEndpointVolume.Channels.Count; c++ )
+            {
+                defaultDevice.AudioEndpointVolume.Channels[c].VolumeLevelScalar = newval;
+            }
         }
         static public Task SendKey(string keys)
         {
@@ -306,6 +313,11 @@ namespace WindowsFormsApplication1
             if (FRM2.IsDisposed) { FRM2 = new Form2(); }
             FRM2.Show();
             FRM2.Activate();
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            SetVolume(30, 100);
         }
     }
 }
